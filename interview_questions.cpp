@@ -210,8 +210,151 @@ int main() {
 
 #if defined(CLICK_COUNTS)
     /*
-    Question #3
-    ===========
+Question# 3
+===========
+You are in charge of a display advertising program. Your ads are displayed on websites all over
+the internet. You have some CSV input data that counts how many times that users have clicked 
+on an ad on each individual domain. Every line consists of a click count and a domain name, 
+like this:
+
+counts = [ "900,google.com",
+     "60,mail.yahoo.com",
+     "10,mobile.sports.yahoo.com",
+     "40,sports.yahoo.com",
+     "300,yahoo.com",
+     "10,stackoverflow.com",
+     "2,en.wikipedia.org",
+     "1,es.wikipedia.org",
+     "1,mobile.sports" ]
+
+Write a function that takes this input as a parameter and returns a data structure containing 
+the number of clicks that were recorded on each domain AND each subdomain under it. For 
+example, a click on "mail.yahoo.com" counts toward the totals for "mail.yahoo.com", "yahoo.com",
+and "com". (Subdomains are added to the left of their parent domain. So "mail" and "mail.yahoo"
+are not valid domains. Note that "mobile.sports" appears as a separate domain as the last item 
+of the input.)
+
+Sample output (in any order/format):
+
+calculateClicksByDomain(counts)
+1320    com
+ 900    google.com
+ 410    yahoo.com
+  60    mail.yahoo.com
+  10    mobile.sports.yahoo.com
+  50    sports.yahoo.com
+  10    stackoverflow.com
+   3    org
+   3    wikipedia.org
+   2    en.wikipedia.org
+   1    es.wikipedia.org
+   1    mobile.sports
+   1    sports
     */
+#include <string>
+#include <vector>
+#include <set>
+#include <iomanip>
+#include <algorithm>
+class CClickData
+{
+#define ACCESSOR_STR( member ) string& Get##member() { return m_##member; } void Set##member(const string& s) { m_##member = s; }
+#define ACCESSOR_INT( member ) int Get##member() { return m_##member; } void Set##member(const int& n) { m_##member = n; }
+public:
+    CClickData(string& address, int& clicks):
+        m_Address(address),
+        m_Clicks(clicks)
+    {
+    }
+    ~CClickData()
+    {}
+    ACCESSOR_STR(Address)
+    ACCESSOR_INT(Clicks)
+private:
+    string m_Address;
+    int m_Clicks;
+};
+
+void createResultSet(string& s, set<string>& strSet)
+{
+    string::size_type found = 0;
+    while (string::npos != (found = s.find_last_of(".", found - 1)))
+    {
+        string str = s.substr(found, s.length());
+        if (str[0] == '.')
+        {
+            str = str.substr(1, str.length());
+        }
+        strSet.insert( str );
+    }
+    //get full string
+    strSet.insert(s);
+}
+
+void calculateClicksByDomain(const vector<vector<string>>& counts,const set<string>& searchStrings, vector<CClickData*>& clickdata)
+{
+    int sum_clicks;
+    set<string>::const_iterator iter;
+    for (iter = searchStrings.begin(); iter != searchStrings.end(); ++iter)
+    {
+        sum_clicks = 0;
+        string::size_type found = string::npos;
+        for (int i = 0; i < counts.size(); ++i)
+        {
+            found = string::npos;
+            if (string::npos != (found = counts[i][1].find(*iter)))
+            {
+                if (counts[i][1].size() - found == (*iter).size())
+                {
+                    sum_clicks += stoi(counts[i][0]);
+                }
+            }
+        }
+        string str = *iter;
+        CClickData* clicksbydomain = new CClickData(str, sum_clicks);
+        clickdata.push_back(clicksbydomain);
+    }
+}
+
+bool cmp(CClickData *a, CClickData *b) {
+    return (a->GetClicks() > b->GetClicks());
+}
+int main() {
+    vector<vector<string>> counts = {
+        {"900","google.com"},
+        {"60","mail.yahoo.com"},
+        {"10","mobile.sports.yahoo.com"},
+        {"40","sports.yahoo.com"},
+        {"300","yahoo.com"},
+        {"10","stackoverflow.com"},
+        {"2","en.wikipedia.org"},
+        {"1","es.wikipedia.org"},
+        {"1","mobile.sports"}
+    };
+
+    set<string> searchStrings;
+    vector<CClickData*> vecClickData;
+    for (int i = 0; i < counts.size(); ++i) {
+        createResultSet(counts[i][1], searchStrings);
+    }
+    calculateClicksByDomain(counts, searchStrings, vecClickData);
+    sort(vecClickData.begin(), vecClickData.end(), cmp);
+    vector<CClickData*>::const_iterator iter;
+    for (iter = vecClickData.begin(); iter != vecClickData.end(); ++iter)
+    {
+        cout << (*iter)->GetClicks() << setw(6) << "\t\t\t" << (*iter)->GetAddress() << "\n";
+    }
+    cout << endl;
+    
+    for (iter = vecClickData.begin(); iter != vecClickData.end(); ++iter)
+    {
+        CClickData* pe = *iter;
+        delete pe;
+    }
+    vecClickData.clear();
+
+    return 0;
+}
 
 #endif
+
